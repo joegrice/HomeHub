@@ -18,7 +18,7 @@
     "googleapis": "^171.4.0",
     "ical.js": "^2.2.1",
     "lucide-react": "^1.7.0",
-    "next": "15.5.14",
+    "next": "16.2.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "rss-parser": "^3.13.0",
@@ -33,7 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.14",
+    "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
