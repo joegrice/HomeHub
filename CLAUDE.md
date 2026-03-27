@@ -71,7 +71,7 @@ Browser                     Next.js Server              External APIs
 | `HUXLEY2_TOKEN` | No | — | Huxley2 access token — register free at huxley2.azurewebsites.net |
 | `TFL_API_KEY` | Yes (tube) | — | TfL Unified API key — free at api.tfl.gov.uk |
 | `METOFFICE_API_KEY` | Yes (weather) | — | Met Office DataHub key — free tier at datahub.metoffice.gov.uk |
-| `WEATHER_POSTCODE` | No | — | UK postcode for weather location (outward code fine, e.g. `SM3`). Takes priority over lat/lng |
+| `WEATHER_POSTCODE` | No | — | UK postcode for weather location (outward code fine, e.g. `SW1A`). Takes priority over lat/lng |
 | `WEATHER_LAT` | No | `52.4796` | Latitude fallback when no postcode is set |
 | `WEATHER_LNG` | No | `-1.9026` | Longitude fallback when no postcode is set |
 | `CALENDAR_SOURCE` | No | `ical` | `"ical"` or `"gmail"` |
@@ -153,11 +153,19 @@ npm run lint       # ESLint
 
 ---
 
+## Documentation & Assets
+
+- **`README.md`** — minimal, feature-focused. Keep it short. No API schemas, no project structure trees, no tech stack tables. Update it when widgets are added or removed.
+- **`.env.example`** — the canonical reference for configuration. Every env var in `lib/config.ts` must have a corresponding commented entry here. Never put real keys in this file.
+- **`public/dashboard.png`** — screenshot of the full dashboard. Replace it when the UI changes significantly.
+
+---
+
 ## Known Gotchas
 
 - **`webcal://` protocol** — iCloud and some other calendar providers give URLs beginning with `webcal://`. Node.js `fetch()` only supports `http://` and `https://`. The calendar API route rewrites the scheme before fetching.
 
-- **postcodes.io outward codes return arrays** — When `WEATHER_POSTCODE` is an outward code (e.g. `SM3`) rather than a full postcode, `api.postcodes.io/outcodes/SM3` returns `admin_district` as an array of boroughs. The weather API takes the first element. Full postcodes return a plain string.
+- **postcodes.io outward codes return arrays** — When `WEATHER_POSTCODE` is an outward code (e.g. `SW1A`) rather than a full postcode, `api.postcodes.io/outcodes/{outcode}` returns `admin_district` as an array of boroughs. The weather API takes the first element. Full postcodes return a plain string.
 
 - **Huxley2 `minutesUntil` for delayed trains** — The `etd` field from Huxley2 is a plain `"HH:mm"` string when the train has a new estimated time. The trains API uses `etd` (not `std`) to compute `minutesUntil` when a train is delayed, otherwise time-of-day arithmetic wraps past midnight and produces spurious values like "in 1420 mins".
 

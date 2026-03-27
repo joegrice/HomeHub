@@ -19,7 +19,7 @@ interface MetOfficeSlot {
  *
  * Priority order:
  * 1. `WEATHER_POSTCODE` env var — looked up via postcodes.io (full postcode, then outward code).
- *    Outward codes (e.g. `SM3`) return `admin_district` as an array; the first element is used.
+ *    Outward codes (e.g. `SW1A`) return `admin_district` as an array; the first element is used.
  * 2. `WEATHER_LAT` / `WEATHER_LNG` env vars — used directly with an empty location name.
  * 3. Hardcoded defaults from `WEATHER_LAT` / `WEATHER_LNG` constants in `lib/config.ts`.
  *
@@ -31,7 +31,7 @@ async function resolveCoords(): Promise<{ lat: number; lng: number; locationName
   const postcode = process.env.WEATHER_POSTCODE
   if (postcode) {
     const cleaned = postcode.trim().replace(/\s+/g, '')
-    // Try full postcode first, then outward code (e.g. "SM3", "SW1A")
+    // Try full postcode first, then outward code (e.g. "SW1A", "M1")
     const paths = [
       `postcodes/${encodeURIComponent(cleaned)}`,
       `outcodes/${encodeURIComponent(cleaned)}`,

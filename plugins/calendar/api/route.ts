@@ -1,16 +1,34 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import type { CalendarEvent } from "../types"
 
+interface DayBounds {
+  dayStart: Date
+  dayEnd: Date
+}
+
+function getDayBounds(dateParam: string | null): DayBounds {
+  let dayStart: Date
+  if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+    dayStart = new Date(`${dateParam}T00:00:00.000Z`)
+  } else {
+    dayStart = new Date()
+    dayStart.setHours(0, 0, 0, 0)
+  }
+  const dayEnd = new Date(dayStart)
+  dayEnd.setHours(23, 59, 59, 999)
+  return { dayStart, dayEnd }
+}
+
 /**
- * Fetches and parses today's events from an iCal/CalDAV URL (`ICAL_URL` env var).
+ * Fetches and parses events from an iCal/CalDAV URL (`ICAL_URL` env var) for the given day.
  * Handles both single and recurring events. Recurring events are expanded via
  * `ICAL.RecurExpansion` with a cap of 500 occurrences per rule to guard against
  * unbounded rules. `webcal://` URLs are rewritten to `https://` before fetching.
  *
- * @returns Events whose time range overlaps with today, sorted by start time.
+ * @returns Events whose time range overlaps with the given day, sorted by start time.
  * @throws When `ICAL_URL` is not set or the fetch/parse fails.
  */
-async function fetchIcal(): Promise<CalendarEvent[]> {
+async function fetchIcal({ dayStart, dayEnd }: DayBounds): Promise<CalendarEvent[]> {
   const icalUrl = process.env.ICAL_URL
   if (!icalUrl) throw new Error("ICAL_URL not configured")
 
@@ -25,12 +43,6 @@ async function fetchIcal(): Promise<CalendarEvent[]> {
   const jcal = ICAL.parse(icsText)
   const comp = new ICAL.Component(jcal)
   const vevents = comp.getAllSubcomponents("vevent")
-
-  const now = new Date()
-  const todayStart = new Date(now)
-  todayStart.setHours(0, 0, 0, 0)
-  const todayEnd = new Date(now)
-  todayEnd.setHours(23, 59, 59, 999)
 
   const events: CalendarEvent[] = []
 
@@ -48,10 +60,10 @@ async function fetchIcal(): Promise<CalendarEvent[]> {
       while ((next = expand.next()) && count < 500) {
         count++
         const start = next.toJSDate()
-        if (start > todayEnd) break
+        if (start > dayEnd) break
         const duration = event.duration
         const end = new Date(start.getTime() + duration.toSeconds() * 1000)
-        if (end >= todayStart && start <= todayEnd) {
+        if (end >= dayStart && start <= dayEnd) {
           events.push({
             id: `${event.uid}-${count}`,
             title: event.summary,
@@ -66,7 +78,7 @@ async function fetchIcal(): Promise<CalendarEvent[]> {
     } else {
       const start = event.startDate.toJSDate()
       const end = event.endDate.toJSDate()
-      if (end >= todayStart && start <= todayEnd) {
+      if (end >= dayStart && start <= dayEnd) {
         events.push({
           id: event.uid,
           title: event.summary,
@@ -86,14 +98,14 @@ async function fetchIcal(): Promise<CalendarEvent[]> {
 }
 
 /**
- * Fetches today's events from the primary Google Calendar using a GCP service account.
+ * Fetches events from the primary Google Calendar using a GCP service account for the given day.
  * The service account JSON is read from `GOOGLE_SERVICE_ACCOUNT_KEY` (single-line string).
  * Requires the calendar.readonly OAuth scope granted to the service account.
  *
- * @returns Today's events sorted by start time (Google Calendar API handles ordering).
+ * @returns Events sorted by start time (Google Calendar API handles ordering).
  * @throws When `GOOGLE_SERVICE_ACCOUNT_KEY` is not set or the API call fails.
  */
-async function fetchGmail(): Promise<CalendarEvent[]> {
+async function fetchGmail({ dayStart, dayEnd }: DayBounds): Promise<CalendarEvent[]> {
   const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
   if (!keyJson) throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY not configured")
 
@@ -107,16 +119,10 @@ async function fetchGmail(): Promise<CalendarEvent[]> {
 
   const calendar = google.calendar({ version: "v3", auth })
 
-  const now = new Date()
-  const todayStart = new Date(now)
-  todayStart.setHours(0, 0, 0, 0)
-  const todayEnd = new Date(now)
-  todayEnd.setHours(23, 59, 59, 999)
-
   const res = await calendar.events.list({
     calendarId: "primary",
-    timeMin: todayStart.toISOString(),
-    timeMax: todayEnd.toISOString(),
+    timeMin: dayStart.toISOString(),
+    timeMax: dayEnd.toISOString(),
     singleEvents: true,
     orderBy: "startTime",
   })
@@ -125,20 +131,24 @@ async function fetchGmail(): Promise<CalendarEvent[]> {
   return items.map((item) => ({
     id: item.id ?? Math.random().toString(),
     title: item.summary ?? "(No title)",
-    startTime: item.start?.dateTime ?? item.start?.date ?? todayStart.toISOString(),
-    endTime: item.end?.dateTime ?? item.end?.date ?? todayEnd.toISOString(),
+    startTime: item.start?.dateTime ?? item.start?.date ?? dayStart.toISOString(),
+    endTime: item.end?.dateTime ?? item.end?.date ?? dayEnd.toISOString(),
     location: item.location ?? undefined,
     calendarName: "Google Calendar",
     isAllDay: !item.start?.dateTime,
   }))
 }
 
-/** `GET /api/calendar` — returns today's events from the configured calendar source. */
-export async function GET() {
+/** `GET /api/calendar` — returns events for the given date (defaults to today) from the configured calendar source. */
+export async function GET(request: NextRequest) {
+  const dateParam = request.nextUrl.searchParams.get("date")
+  const { dayStart, dayEnd } = getDayBounds(dateParam)
   const source = process.env.CALENDAR_SOURCE ?? "ical"
 
   try {
-    const events = source === "gmail" ? await fetchGmail() : await fetchIcal()
+    const events = source === "gmail"
+      ? await fetchGmail({ dayStart, dayEnd })
+      : await fetchIcal({ dayStart, dayEnd })
     return NextResponse.json(events)
   } catch (err) {
     return NextResponse.json(
@@ -147,4 +157,3 @@ export async function GET() {
     )
   }
 }
-

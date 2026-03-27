@@ -1,20 +1,22 @@
 "use client"
 
+import { useState, useMemo, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { RefreshCw, AlertCircle, MapPin, CheckCircle } from "lucide-react"
+import { RefreshCw, AlertCircle, MapPin, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import WidgetCard, { CardHeader } from "@/components/WidgetCard"
+import WidgetCard from "@/components/WidgetCard"
 import { usePlugin } from "@/lib/hooks/usePlugin"
 import { relativeTime, hashToHue } from "@/lib/utils"
 import { formatInTimeZone } from "date-fns-tz"
-import { parseISO, differenceInMinutes, isAfter, isBefore } from "date-fns"
+import { parseISO, differenceInMinutes, isAfter, isBefore, addDays } from "date-fns"
 import type { CalendarEvent } from "./types"
 import config from "./config"
 
 const TZ = "Europe/London"
+const LONG_REFRESH_MS = 60 * 60 * 1000
 
 const MOCK: CalendarEvent[] = [
   { id: "1", title: "Team standup", startTime: "2026-03-27T09:00:00Z", endTime: "2026-03-27T09:15:00Z", calendarName: "Work", isAllDay: false },
@@ -32,12 +34,19 @@ function formatDuration(startIso: string, endIso: string): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
-function EventRow({ event }: { event: CalendarEvent }) {
+function getHeaderLabel(offset: number, date: Date): string {
+  if (offset === 0) return "Today's Calendar"
+  if (offset === 1) return "Tomorrow"
+  if (offset === -1) return "Yesterday"
+  return formatInTimeZone(date, TZ, "EEE d MMM").toUpperCase()
+}
+
+function EventRow({ event, isViewingToday }: { event: CalendarEvent; isViewingToday: boolean }) {
   const now = new Date()
   const start = parseISO(event.startTime)
   const end = parseISO(event.endTime)
-  const isNow = isAfter(now, start) && isBefore(now, end)
-  const isSoon = !isNow && differenceInMinutes(start, now) <= 30 && differenceInMinutes(start, now) > 0
+  const isNow = isViewingToday && isAfter(now, start) && isBefore(now, end)
+  const isSoon = isViewingToday && !isNow && differenceInMinutes(start, now) <= 30 && differenceInMinutes(start, now) > 0
   const isPast = isBefore(end, now)
   const hue = hashToHue(event.calendarName ?? "default")
 
@@ -54,7 +63,7 @@ function EventRow({ event }: { event: CalendarEvent }) {
       />
 
       {/* Time */}
-      <div className="min-w-[42px]">
+      <div className="w-[52px] flex-shrink-0">
         <span
           className="text-xs font-mono text-[#6b7280] tabular-nums"
           style={{ fontFamily: "var(--font-geist-mono)" }}
@@ -89,10 +98,27 @@ function EventRow({ event }: { event: CalendarEvent }) {
 }
 
 export default function CalendarWidget() {
+  const [dayOffset, setDayOffset] = useState(0)
+  const isViewingToday = dayOffset === 0
+
+  const viewDate = useMemo(() => addDays(new Date(), dayOffset), [dayOffset])
+  const dateParam = useMemo(() => formatInTimeZone(viewDate, TZ, "yyyy-MM-dd"), [viewDate])
+
+  const apiPath = isViewingToday ? "/api/calendar" : `/api/calendar?date=${dateParam}`
+  const effectiveRefreshMs = isViewingToday ? config.refreshMs : LONG_REFRESH_MS
+
   const { data, loading, error, lastUpdated, refresh } = usePlugin<CalendarEvent[]>(
-    "/api/calendar",
-    config.refreshMs
+    apiPath,
+    effectiveRefreshMs
   )
+
+  // Track which date was last successfully loaded to show skeletons during day transitions
+  const loadedDateRef = useRef(dateParam)
+  useEffect(() => {
+    if (lastUpdated) loadedDateRef.current = dateParam
+  }, [lastUpdated, dateParam])
+  const isTransitioning = loadedDateRef.current !== dateParam
+  const showSkeletons = (loading && !data) || isTransitioning
 
   const events = data ?? MOCK
   const usingMock = !data
@@ -105,7 +131,29 @@ export default function CalendarWidget() {
       className="h-full"
     >
       <WidgetCard>
-        <CardHeader label="Today's Calendar">
+        {/* Inline header with prev/next navigation */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-[#6b7280] hover:text-white"
+              onClick={() => setDayOffset(o => o - 1)}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-xs uppercase tracking-widest text-[#6b7280] font-medium px-1">
+              {getHeaderLabel(dayOffset, viewDate)}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-[#6b7280] hover:text-white"
+              onClick={() => setDayOffset(o => o + 1)}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
           <div className="flex items-center gap-2">
             {loading && <RefreshCw className="h-3 w-3 text-[#6b7280] animate-spin" />}
             <Button
@@ -117,7 +165,7 @@ export default function CalendarWidget() {
               <RefreshCw className="h-3 w-3" />
             </Button>
           </div>
-        </CardHeader>
+        </div>
 
         {error && (
           <Alert className="mb-4 border-[#ef4444]/20 bg-[#ef4444]/5">
@@ -128,18 +176,22 @@ export default function CalendarWidget() {
           </Alert>
         )}
 
-        {loading && !data ? (
+        {showSkeletons ? (
           <div className="space-y-3">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full bg-[#1e1e2e]" />)}
           </div>
         ) : events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 gap-2">
             <CheckCircle className="h-8 w-8 text-[#22c55e]/40" />
-            <p className="text-sm text-[#6b7280]">Nothing scheduled today</p>
+            <p className="text-sm text-[#6b7280]">
+              {isViewingToday ? "Nothing scheduled today" : "Nothing scheduled"}
+            </p>
           </div>
         ) : (
           <div className="space-y-0.5">
-            {events.map(event => <EventRow key={event.id} event={event} />)}
+            {events.map(event => (
+              <EventRow key={event.id} event={event} isViewingToday={isViewingToday} />
+            ))}
           </div>
         )}
 
