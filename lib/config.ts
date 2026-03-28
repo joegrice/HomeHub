@@ -1,5 +1,5 @@
 /** National Rail CRS station code for the trains widget (e.g. `"WAT"`, `"MAN"`). */
-export const STATION_CRS = process.env.STATION_CRS ?? 'CHE';
+export const STATION_CRS = process.env.STATION_CRS ?? 'VIC';
 
 /** Base URL for the Huxley2 National Rail Darwin proxy. */
 export const HUXLEY2_BASE = 'https://huxley2.azurewebsites.net';

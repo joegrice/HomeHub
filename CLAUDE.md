@@ -67,7 +67,7 @@ Browser                     Next.js Server              External APIs
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `STATION_CRS` | No | `CHE` | National Rail CRS code for the trains widget (e.g. `WAT`, `MAN`) |
+| `STATION_CRS` | No | `VIC` | National Rail CRS code for the trains widget (e.g. `WAT`, `MAN`) |
 | `HUXLEY2_TOKEN` | No | — | Huxley2 access token — register free at huxley2.azurewebsites.net |
 | `TFL_API_KEY` | Yes (tube) | — | TfL Unified API key — free at api.tfl.gov.uk |
 | `METOFFICE_API_KEY` | Yes (weather) | — | Met Office DataHub key — free tier at datahub.metoffice.gov.uk |

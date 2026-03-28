@@ -105,7 +105,7 @@ export default function TrainWidget() {
                   <p className="text-sm font-medium text-white truncate">{dep.destination}</p>
                   <p className="text-[10px] text-[#6b7280] truncate">
                     {dep.operator}
-                    {dep.carriages && <span className="ml-1.5">{dep.carriages} carriages</span>}
+                    {dep.carriages && <span className="ml-1.5">- {dep.carriages} carriages</span>}
                   </p>
                 </div>
 
@@ -113,7 +113,7 @@ export default function TrainWidget() {
                 <div className="flex flex-col items-end gap-1">
                   {dep.platform && (
                     <Badge variant="outline" className="text-[10px] border-[#1e1e2e] text-[#6b7280] px-1.5 py-0">
-                      Plt {dep.platform}
+                      Platform {dep.platform}
                     </Badge>
                   )}
                   <StatusBadge status={dep.status} revisedTime={dep.revisedTime} />
