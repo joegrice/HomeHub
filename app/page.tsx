@@ -11,6 +11,14 @@ export default function Home() {
       <Header />
       <main className="mx-auto max-w-screen-2xl px-4 py-5">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+          {/* Weather: 6 cols */}
+          <div className="md:col-span-2 lg:col-span-6">
+            <WeatherWidget />
+          </div>
+          {/* Calendar: 6 cols */}
+          <div className="md:col-span-2 lg:col-span-6">
+            <CalendarWidget />
+          </div>
           {/* Trains: 4 cols */}
           <div className="lg:col-span-4">
             <TrainWidget />
@@ -22,14 +30,6 @@ export default function Home() {
           {/* News: 4 cols */}
           <div className="lg:col-span-4">
             <NewsWidget />
-          </div>
-          {/* Weather: 6 cols */}
-          <div className="md:col-span-2 lg:col-span-6">
-            <WeatherWidget />
-          </div>
-          {/* Calendar: 6 cols */}
-          <div className="md:col-span-2 lg:col-span-6">
-            <CalendarWidget />
           </div>
         </div>
       </main>

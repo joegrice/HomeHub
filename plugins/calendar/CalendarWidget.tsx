@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
-import { RefreshCw, AlertCircle, MapPin, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { RefreshCw, AlertCircle, MapPin, CheckCircle, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -156,6 +156,17 @@ export default function CalendarWidget() {
           </div>
           <div className="flex items-center gap-2">
             {loading && <RefreshCw className="h-3 w-3 text-[#6b7280] animate-spin" />}
+            {!isViewingToday && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-[#6b7280] hover:text-white"
+                onClick={() => setDayOffset(0)}
+                title="Back to today"
+              >
+                <CalendarDays className="h-3 w-3" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
