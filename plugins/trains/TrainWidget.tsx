@@ -123,7 +123,7 @@ export default function TrainWidget() {
           </div>
         )}
 
-        <div className="mt-3 pt-3 border-t border-[#1e1e2e] flex items-center gap-2 text-[10px] text-[#6b7280]">
+        <div className="mt-auto pt-3 border-t border-[#1e1e2e] flex items-center gap-2 text-[10px] text-[#6b7280]">
           <Train className="h-3 w-3" />
           {usingMock ? (
             <span>Mock data — configure API</span>

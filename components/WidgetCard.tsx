@@ -16,7 +16,7 @@ export default function WidgetCard({ children, className }: WidgetCardProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-[#1e1e2e] p-5 shadow-lg bg-[#111118] h-full",
+        "rounded-xl border border-[#1e1e2e] p-5 shadow-lg bg-[#111118] h-full flex flex-col",
         className
       )}
     >
